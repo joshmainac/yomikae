@@ -1,6 +1,5 @@
 'use client'
 import TextEditor from '@/components/TextEditor'
-import RichTextEditor from '@/components/RichTextEditor'
 // import { useState } from 'react'
 // import { Editor } from '@tinymce/tinymce-react'
 
@@ -10,7 +9,7 @@ export default function EditorPage() {
             <h1 className="text-2xl font-bold mb-6">よみかえ</h1>
             <div className="flex">
                 <div className="w-1/2">
-                    <RichTextEditor/>
+                    <TextEditor/>
                 </div>
             </div>
         </main>

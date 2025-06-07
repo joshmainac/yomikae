@@ -87,6 +87,23 @@ export default function RichTextEditor() {
           <p className="text-sm text-gray-600">{suggestion}</p>
         </div>
       )}
+      <div className="flex gap-2 mb-2">
+        <button
+          onClick={() => editor?.chain().focus().toggleBold().run()}
+          className={`px-2 py-1 border rounded ${editor?.isActive('bold') ? 'bg-gray-300' : ''}`}
+        >
+          Bold
+        </button>
+        <button
+          onClick={() => editor?.chain().focus().toggleItalic().run()}
+          className={`px-2 py-1 border rounded ${editor?.isActive('italic') ? 'bg-gray-300' : ''}`}
+        >
+          Italic
+        </button>
+      </div>
+
+
+
 
       <div className="mt-4">
         <h2 className="text-lg font-bold mb-2">よみかえ</h2>

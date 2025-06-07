@@ -1,23 +1,24 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useAutoSave } from "@/hooks/useAutoSave"
 
 
-export default function TextEditor(){
+export default function TextEditor() {
     const charLimit = 1000
     const STORAGE_KEY = 'text-editor-content'
     const [text, setText] = useState('')
     const [suggestion, setSuggestion] = useState('')
     const [loading, setLoading] = useState(false)
+    const textareaRef = useRef<HTMLTextAreaElement>(null)
 
     //Load saved text from local storage
-    useEffect(()=>{
+    useEffect(() => {
         const saved = localStorage.getItem(STORAGE_KEY)
-        if(saved){
+        if (saved) {
             setText(saved)
         }
-    },[])
+    }, [])
 
     //auto save to local storage as user types
     useAutoSave(STORAGE_KEY, text)
@@ -34,8 +35,8 @@ export default function TextEditor(){
             const res = await fetch('/api/grammar-check',
                 {
                     method: 'POST',
-                    headers: {'content-type': 'application/json'},
-                    body: JSON.stringify({text}),
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ text }),
                 }
             )
             const data = await res.json()
@@ -49,9 +50,35 @@ export default function TextEditor(){
         }
     }
 
+    const handleBold = () => {
+        const textarea = textareaRef.current
+        if (!textarea) return
+
+        const start = textarea.selectionStart
+        const end = textarea.selectionEnd
+
+        // If no text is selected, do nothing
+        if (start === end) return
+
+        const before = text.slice(0, start)
+        const selected = text.slice(start, end)
+        const after = text.slice(end)
+
+        const newText = `${before}**${selected}**${after}`
+        setText(newText)
+
+        // Maintain selection after state update
+        requestAnimationFrame(() => {
+            textarea.focus()
+            textarea.setSelectionRange(start + 2, end + 2)
+        })
+    }
+
+
     return (
         <div>
             <textarea
+                ref={textareaRef}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="テキストを入力してください"
@@ -76,7 +103,7 @@ export default function TextEditor(){
             >
                 {loading ? '文法チェック中...' : '文法チェック'}
             </button>
-            
+
 
             {suggestion && (
                 <div className="mt-4 bg-gray-100 p-4 rounded-md">
@@ -84,6 +111,15 @@ export default function TextEditor(){
                     <p className="text-sm text-gray-600">{suggestion}</p>
                 </div>
             )}
+
+            <button
+                onClick={handleBold}
+                disabled={!text}
+                className="block mt-4 bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors duration-200"
+            >
+                太字
+            </button>
+
 
             <div className="mt-4">
                 <h2 className="text-lg font-bold mb-2">よみかえ</h2>
