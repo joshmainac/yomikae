@@ -37,3 +37,29 @@ body {
   overflow-y: auto;
   white-space: pre-wrap;
 }
+
+
+.vertical-jp-preview-rich {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: "Yu Mincho", "Noto Serif JP", serif;
+
+  background-image: url('/assets/genko13-green.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+
+  border: 1px solid #ccc;
+  padding: 2rem;
+
+  /* Layout size matches genkō image */
+  width: 700px;
+  height: 500px;
+
+  font-size: 18px;
+  line-height: 1.9em;
+  letter-spacing: 0.15em;
+
+  white-space: pre-wrap;
+  overflow-y: auto;
+}

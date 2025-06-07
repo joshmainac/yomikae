@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { useAutoSave } from "@/hooks/useAutoSave"
 import MarkdownPreview from "./MarkdownPreview"
 import JapaneseMarkdownPreview from "./JapaneseMarkdownPreview"
+import RichJapaneseMarkdownPreview from "./RichJapaneseMarkdownPreview"
 
 
 export default function TextEditor() {
@@ -124,6 +125,7 @@ export default function TextEditor() {
 
             <MarkdownPreview markdown={text} />
             <JapaneseMarkdownPreview markdown={text} />
+            <RichJapaneseMarkdownPreview markdown={text} />
 
 
 
