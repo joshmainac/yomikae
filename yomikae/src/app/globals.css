@@ -64,6 +64,24 @@ body {
   overflow-y: auto;
 }
 
+
+.genko-page {
+  background-color: white;
+  padding: 2rem;
+  border: 2px solid #ccc;
+  width: fit-content;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  border-radius: 4px;
+}
+
+.genko-grid {
+  width: 600px;
+  height: 600px;
+  border: 1px solid #aaa;
+  background-color: #fefefe;
+}
+
 .genko-cell {
   border: 1px dashed #7fc27f;
   display: flex;
