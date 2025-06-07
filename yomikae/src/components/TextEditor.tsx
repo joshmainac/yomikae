@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useAutoSave } from "@/hooks/useAutoSave"
+import MarkdownPreview from "./MarkdownPreview"
 
 
 export default function TextEditor() {
@@ -119,6 +120,9 @@ export default function TextEditor() {
             >
                 太字
             </button>
+
+            <MarkdownPreview markdown={text} />
+
 
 
             <div className="mt-4">
