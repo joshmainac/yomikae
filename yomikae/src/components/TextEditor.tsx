@@ -6,6 +6,7 @@ import MarkdownPreview from "./MarkdownPreview"
 import JapaneseMarkdownPreview from "./JapaneseMarkdownPreview"
 import RichJapaneseMarkdownPreview from "./RichJapaneseMarkdownPreview"
 import GenkoGridPreview from "./GenkoGridPreview"
+import GenkoMultiPagePreview from "./GenkoMultiPagePreview"
 
 
 export default function TextEditor() {
@@ -128,6 +129,7 @@ export default function TextEditor() {
             <JapaneseMarkdownPreview markdown={text} />
             <RichJapaneseMarkdownPreview markdown={text} />
             <GenkoGridPreview text={text} />
+            <GenkoMultiPagePreview text={text} />
 
 
             <div className="mt-4">
