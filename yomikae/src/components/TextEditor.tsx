@@ -5,6 +5,7 @@ import { useAutoSave } from "@/hooks/useAutoSave"
 import MarkdownPreview from "./MarkdownPreview"
 import JapaneseMarkdownPreview from "./JapaneseMarkdownPreview"
 import RichJapaneseMarkdownPreview from "./RichJapaneseMarkdownPreview"
+import GenkoGridPreview from "./GenkoGridPreview"
 
 
 export default function TextEditor() {
@@ -126,7 +127,7 @@ export default function TextEditor() {
             <MarkdownPreview markdown={text} />
             <JapaneseMarkdownPreview markdown={text} />
             <RichJapaneseMarkdownPreview markdown={text} />
-
+            <GenkoGridPreview text={text} />
 
 
             <div className="mt-4">

@@ -63,3 +63,17 @@ body {
   white-space: pre-wrap;
   overflow-y: auto;
 }
+
+.genko-cell {
+  border: 1px dashed #7fc27f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Yu Mincho", "Noto Serif JP", serif;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 16px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+}
