@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { useAutoSave } from "@/hooks/useAutoSave"
 import MarkdownPreview from "./MarkdownPreview"
+import JapaneseMarkdownPreview from "./JapaneseMarkdownPreview"
 
 
 export default function TextEditor() {
@@ -122,6 +123,7 @@ export default function TextEditor() {
             </button>
 
             <MarkdownPreview markdown={text} />
+            <JapaneseMarkdownPreview markdown={text} />
 
 
 
