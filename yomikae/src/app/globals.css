@@ -94,4 +94,108 @@ body {
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
+  background: transparent;
+  padding: 0;
+  text-align: center;
+  outline: none;
+  width: 100%;
+  height: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* Editable Genko Cell Styles */
+.genko-cell.focused {
+  border-color: #4a9e4a;
+  border-style: solid;
+  background-color: rgba(127, 194, 127, 0.1);
+}
+
+.genko-cell.bold {
+  font-weight: bold;
+}
+
+.genko-cell.italic {
+  font-style: italic;
+}
+
+/* IME Styles */
+.genko-cell::-webkit-input-placeholder {
+  color: #aaa;
+}
+
+.genko-cell::placeholder {
+  color: #aaa;
+}
+
+/* Editable Genko Container */
+.editable-genko-container {
+  background-color: white;
+  padding: 2rem;
+  border: 2px solid #ccc;
+  width: fit-content;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  margin: 2rem auto;
+  border-radius: 4px;
+}
+
+.editable-genko-wrapper {
+  position: relative;
+}
+
+/* Editable Genko Grid */
+.editable-genko-grid {
+  width: 600px;
+  height: 600px;
+  border: 1px solid #aaa;
+  background-color: #fefefe;
+}
+
+/* Editable Genko Cell */
+.editable-genko-cell {
+  border: 1px dashed #7fc27f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Yu Mincho", "Noto Serif JP", serif;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 16px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  background: transparent;
+  padding: 0;
+  text-align: center;
+  outline: none;
+  width: 100%;
+  height: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* Editable Genko Cell States */
+.editable-genko-cell--focused {
+  border-color: #4a9e4a;
+  border-style: solid;
+  background-color: rgba(127, 194, 127, 0.1);
+}
+
+.editable-genko-cell--bold {
+  font-weight: bold;
+}
+
+.editable-genko-cell--italic {
+  font-style: italic;
+}
+
+/* Editable Genko Cell IME Styles */
+.editable-genko-cell::-webkit-input-placeholder {
+  color: #aaa;
+}
+
+.editable-genko-cell::placeholder {
+  color: #aaa;
 }
