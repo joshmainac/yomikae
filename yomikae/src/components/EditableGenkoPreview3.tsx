@@ -1,6 +1,9 @@
+// EditableGenkoPreview.tsx
+
 'use client'
 
 import React, { useState, useEffect, useRef, KeyboardEvent } from 'react'
+import { toHiragana } from 'wanakana'
 import GenkoCenterFoldMarker from './GenkoCenterFoldMarker'
 
 interface CellFormatting {
@@ -23,193 +26,185 @@ export default function EditableGenkoPreview({
     showFoldMarker = false,
     onChange,
 }: Props) {
+    const totalCells = columns * rows
     const [cells, setCells] = useState<string[]>([])
+    const [inputBuffer, setInputBuffer] = useState<string>('')
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
-    const cellRefs = useRef<(HTMLInputElement | null)[]>([])
+    const cellRefs = useRef<Array<HTMLInputElement | null>>([])
 
     const [formatting, setFormatting] = useState<CellFormatting>({
         bold: new Set(),
         italic: new Set(),
     })
-    console.log("EditableGenkoPreview text", text)
 
-    // Initialize cells from text prop
+    // Initialize grid from `text` (column-major → row-major)
     useEffect(() => {
-        const totalCells = columns * rows
-        const paddedText = text.padEnd(totalCells, '　') // full-width space
-
-        // Create grid array (row-major order)
-        const gridArray = new Array(totalCells).fill('　')
-
-        // Fill grid array from text (which is in column-major order)
-        for (let i = 0; i < paddedText.length; i++) {
+        const padded = text.padEnd(totalCells, '　')
+        const grid = new Array(totalCells).fill('　')
+        for (let i = 0; i < padded.length; i++) {
             const col = Math.floor(i / rows)
             const row = i % rows
-            const gridIndex = row * columns + col
-            gridArray[gridIndex] = paddedText[i]
+            grid[row * columns + col] = padded[i]
         }
+        setCells(grid)
+    }, [text, columns, rows, totalCells])
 
-        setCells(gridArray)
-    }, [text, columns, rows])
-
-    // Handle cell value change
-    const handleCellChange = (index: number, value: string) => {
-        const newCells = [...cells]
-        newCells[index] = value.slice(-1) || '　'
-        setCells(newCells)
-
-        // Notify parent of text change
-        if (onChange) {
-            const textArray = new Array(cells.length).fill('　')
-            for (let i = 0; i < cells.length; i++) {
-                const row = Math.floor(i / columns)
-                const col = i % columns
-                const textIndex = col * rows + row
-                textArray[textIndex] = newCells[i]
-            }
-            onChange(textArray.join('').trimEnd())
+    // Notify parent with re-serialized text
+    function notifyParent(updated: string[]) {
+        if (!onChange) return
+        const out = new Array(updated.length).fill('　')
+        for (let i = 0; i < updated.length; i++) {
+            const row = Math.floor(i / columns)
+            const col = i % columns
+            out[col * rows + row] = updated[i]
         }
+        onChange(out.join('').trimEnd())
+    }
 
-        // Auto-advance after a short delay to allow state update to settle
-        if (value) {
-            setTimeout(() => {
-                const currentRow = Math.floor(index / columns)
-                const currentCol = index % columns
+    // Move focus after committing a character
+    function advanceFocus(index: number) {
+        const row = Math.floor(index / columns)
+        const col = index % columns
 
-                if (currentRow < rows - 1) {
-                    // Move down in the same column
-                    const nextIndex = index + columns
-                    setFocusedIndex(nextIndex)
-                    cellRefs.current[nextIndex]?.focus()
-                } else if (currentCol < columns - 1) {
-                    // At bottom of column, move to top of next column to the right
-                    // To move right one column and to the top: 
-                    // 1. First get to the same position in the column to the right: add 1
-                    // 2. Then subtract enough to get to the top of that column: subtract (rows-1) * columns
-                    const nextIndex = index + 1 - ((rows - 1) * columns)
-                    setFocusedIndex(nextIndex)
-                    cellRefs.current[nextIndex]?.focus()
-                }
-            }, 10) // 10ms delay is usually enough
+        if (row < rows - 1) {
+            const next = index + columns
+            setFocusedIndex(next)
+            cellRefs.current[next]?.focus()
+        } else if (col < columns - 1) {
+            const next = index + 1 - (rows - 1) * columns
+            setFocusedIndex(next)
+            cellRefs.current[next]?.focus()
         }
     }
 
+    // Commit a final kana (or direct char) into the cell
+    function commitChar(i: number, char: string) {
+        const updated = [...cells]
+        updated[i] = char
+        setCells(updated)
+        notifyParent(updated)
+        setInputBuffer('')
+        advanceFocus(i)
+    }
 
-    // Handle keyboard navigation
+    // Show intermediate romaji buffer in-cell
+    function showInterim(i: number, buf: string) {
+        const updated = [...cells]
+        updated[i] = buf
+        setCells(updated)
+    }
+
+    // Handle input/change
+    const handleCellChange = (index: number, raw: string) => {
+        const last = raw.slice(-1)
+        // If non-ASCII (likely direct kana), commit immediately
+        if (!/^[A-Za-z]$/.test(last)) {
+            commitChar(index, last || '　')
+            return
+        }
+
+        // Buffer romaji
+        const newBuf = (inputBuffer + last).toLowerCase()
+        setInputBuffer(newBuf)
+
+        // Try conversion
+        const kana = toHiragana(newBuf)
+        if (kana !== newBuf) {
+            commitChar(index, kana)
+        } else {
+            showInterim(index, newBuf)
+        }
+    }
+
+    // Handle backspace & navigation
     const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
         const row = Math.floor(index / columns)
         const col = index % columns
 
         switch (e.key) {
             case 'Backspace':
-                // If current cell is not empty, just clear it
-                if (cells[index] !== '　') {
-                    const newCells = [...cells]
-                    newCells[index] = '　'
-                    setCells(newCells)
+                if (inputBuffer) {
+                    // Remove last romaji char
+                    const buf = inputBuffer.slice(0, -1)
+                    setInputBuffer(buf)
+                    showInterim(index, buf || '　')
+                    e.preventDefault()
+                } else if (cells[index] !== '　') {
+                    // Clear cell
+                    const updated = [...cells]
+                    updated[index] = '　'
+                    setCells(updated)
+                    notifyParent(updated)
                     e.preventDefault()
                 } else {
-                    // Current cell is empty, go back
+                    // Navigate back & clear previous
                     if (row > 0) {
-                        // Move up in the same column
-                        const prevIndex = index - columns
-                        const newCells = [...cells]
-                        newCells[prevIndex] = '　'
-                        setCells(newCells)
-                        setFocusedIndex(prevIndex)
-                        cellRefs.current[prevIndex]?.focus()
+                        const prev = index - columns
+                        const updated = [...cells]
+                        updated[prev] = '　'
+                        setCells(updated)
+                        notifyParent(updated)
+                        setFocusedIndex(prev)
+                        cellRefs.current[prev]?.focus()
                         e.preventDefault()
                     } else if (col > 0) {
-                        // Move to bottom of previous column
-                        // const prevIndex = row + (col - 1) * rows
-                        // const newCells = [...cells]
-                        // newCells[prevIndex] = '　'
-                        // setCells(newCells)
-                        // setFocusedIndex(prevIndex)
-                        // cellRefs.current[prevIndex]?.focus()
-                        // e.preventDefault()
-                        //const prevIndex = row + (col - 1) * rows
-                        //const prevIndex = index + 1 - ((rows + 1) * columns)
-                        //const prevIndex = index  - (index - 0) +(rows * columns) 
-                        const prevIndex = index + columns * (rows - 1) -1
-                        const newCells = [...cells]
-                        newCells[prevIndex] = '　'
-                        setCells(newCells)
-                        setFocusedIndex(prevIndex)
-                        cellRefs.current[prevIndex]?.focus()
+                        const prev = index + columns * (rows - 1) - 1
+                        const updated = [...cells]
+                        updated[prev] = '　'
+                        setCells(updated)
+                        notifyParent(updated)
+                        setFocusedIndex(prev)
+                        cellRefs.current[prev]?.focus()
                         e.preventDefault()
                     }
                 }
                 break
-            
-            case 'ArrowRight': // Move to previous column (right in vertical writing)
+
+            case 'ArrowRight':
                 if (col > 0) {
-                    const newIndex = index - 1
-                    setFocusedIndex(newIndex)
-                    cellRefs.current[newIndex]?.focus()
+                    const ni = index - 1
+                    setFocusedIndex(ni)
+                    cellRefs.current[ni]?.focus()
                 } else if (row > 0) {
-                    // Wrap to previous row, rightmost column
-                    const newIndex = (row - 1) * columns + (columns - 1)
-                    setFocusedIndex(newIndex)
-                    cellRefs.current[newIndex]?.focus()
+                    const ni = (row - 1) * columns + (columns - 1)
+                    setFocusedIndex(ni)
+                    cellRefs.current[ni]?.focus()
                 }
                 break
-            case 'ArrowLeft': // Move to next column (left in vertical writing)
+
+            case 'ArrowLeft':
                 if (col < columns - 1) {
-                    const newIndex = index + 1
-                    setFocusedIndex(newIndex)
-                    cellRefs.current[newIndex]?.focus()
+                    const ni = index + 1
+                    setFocusedIndex(ni)
+                    cellRefs.current[ni]?.focus()
                 } else if (row < rows - 1) {
-                    // Wrap to next row, leftmost column
-                    const newIndex = (row + 1) * columns
-                    setFocusedIndex(newIndex)
-                    cellRefs.current[newIndex]?.focus()
+                    const ni = (row + 1) * columns
+                    setFocusedIndex(ni)
+                    cellRefs.current[ni]?.focus()
                 }
                 break
-            case 'ArrowDown': // Move down in the same column
+
+            case 'ArrowDown':
                 if (row < rows - 1) {
-                    const newIndex = index + columns
-                    setFocusedIndex(newIndex)
-                    cellRefs.current[newIndex]?.focus()
+                    const ni = index + columns
+                    setFocusedIndex(ni)
+                    cellRefs.current[ni]?.focus()
                 }
                 break
-            case 'ArrowUp': // Move up in the same column
+
+            case 'ArrowUp':
                 if (row > 0) {
-                    const newIndex = index - columns
-                    setFocusedIndex(newIndex)
-                    cellRefs.current[newIndex]?.focus()
+                    const ni = index - columns
+                    setFocusedIndex(ni)
+                    cellRefs.current[ni]?.focus()
                 }
                 break
         }
-    }
-
-    // Formatting methods (placeholder for now)
-    const getFormatting = (): CellFormatting => formatting
-
-    const setBold = (index: number, bold: boolean) => {
-        const newBold = new Set(formatting.bold)
-        if (bold) {
-            newBold.add(index)
-        } else {
-            newBold.delete(index)
-        }
-        setFormatting({ ...formatting, bold: newBold })
-    }
-
-    const setItalic = (index: number, italic: boolean) => {
-        const newItalic = new Set(formatting.italic)
-        if (italic) {
-            newItalic.add(index)
-        } else {
-            newItalic.delete(index)
-        }
-        setFormatting({ ...formatting, italic: newItalic })
     }
 
     return (
         <div className="editable-genko-container">
             <div className="editable-genko-wrapper">
-                {/* Main Grid */}
                 <div
                     className="editable-genko-grid"
                     style={{
@@ -219,27 +214,28 @@ export default function EditableGenkoPreview({
                         direction: 'rtl',
                     }}
                 >
-                    {cells.map((char, i) => (
+                    {cells.map((ch, i) => (
                         <input
                             key={i}
-                            ref={el => {
-                                cellRefs.current[i] = el
-                            }}
+                            ref={el => (cellRefs.current[i] = el)}
                             type="text"
-                            value={char}
-                            onChange={(e) => handleCellChange(i, e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(e, i)}
-                            className={`editable-genko-cell ${focusedIndex === i ? 'editable-genko-cell--focused' : ''
-                                } ${formatting.bold.has(i) ? 'editable-genko-cell--bold' : ''} ${formatting.italic.has(i) ? 'editable-genko-cell--italic' : ''
-                                }`}
-                            maxLength={10}
+                            value={focusedIndex === i && inputBuffer ? inputBuffer : ch}
+                            onChange={e => handleCellChange(i, e.target.value)}
+                            onKeyDown={e => handleKeyDown(e, i)}
+                            onFocus={() => setFocusedIndex(i)}
+                            className={`
+                editable-genko-cell
+                ${focusedIndex === i ? 'editable-genko-cell--focused' : ''}
+                ${formatting.bold.has(i) ? 'editable-genko-cell--bold' : ''}
+                ${formatting.italic.has(i) ? 'editable-genko-cell--italic' : ''}
+              `}
+                            maxLength={rows} // enough to show buffer
                         />
                     ))}
                 </div>
 
-                {/* Optional Fold Marker */}
                 {showFoldMarker && <GenkoCenterFoldMarker columns={columns} />}
             </div>
         </div>
     )
-} 
+}
