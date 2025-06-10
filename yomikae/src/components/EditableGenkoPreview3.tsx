@@ -101,6 +101,36 @@ export default function EditableGenkoPreview({
         const col = index % columns
 
         switch (e.key) {
+            case 'Backspace':
+                // If current cell is not empty, just clear it
+                if (cells[index] !== '　') {
+                    const newCells = [...cells]
+                    newCells[index] = '　'
+                    setCells(newCells)
+                    e.preventDefault()
+                } else {
+                    // Current cell is empty, go back
+                    if (row > 0) {
+                        // Move up in the same column
+                        const prevIndex = index - columns
+                        const newCells = [...cells]
+                        newCells[prevIndex] = '　'
+                        setCells(newCells)
+                        setFocusedIndex(prevIndex)
+                        cellRefs.current[prevIndex]?.focus()
+                        e.preventDefault()
+                    } else if (col > 0) {
+                        // Move to bottom of previous column
+                        const prevIndex = row + (col - 1) * rows
+                        const newCells = [...cells]
+                        newCells[prevIndex] = '　'
+                        setCells(newCells)
+                        setFocusedIndex(prevIndex)
+                        cellRefs.current[prevIndex]?.focus()
+                        e.preventDefault()
+                    }
+                }
+                break
             
             case 'ArrowRight': // Move to previous column (right in vertical writing)
                 if (col > 0) {
