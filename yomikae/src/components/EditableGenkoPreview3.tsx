@@ -29,6 +29,8 @@ export default function EditableGenkoPreview({
     const totalCells = columns * rows
     const [cells, setCells] = useState<string[]>([])
     const [inputBuffer, setInputBuffer] = useState<string>('')
+    const [composeText, setComposeText] = useState<string>('')
+    const [composing, setComposing] = useState<boolean>(false)
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
     const cellRefs = useRef<Array<HTMLInputElement | null>>([])
 
@@ -77,37 +79,39 @@ export default function EditableGenkoPreview({
         }
     }
 
-    // Commit a final kana (or direct char) into the cell
+    // Commit a final kana/kanji character into the cell
     function commitChar(i: number, char: string) {
         const updated = [...cells]
-        updated[i] = char
+        updated[i] = char || '　'
         setCells(updated)
         notifyParent(updated)
         setInputBuffer('')
+        setComposeText('')
         advanceFocus(i)
     }
 
-    // Show intermediate romaji buffer in-cell
+    // Show intermediate romaji/kana/IME buffer in-cell
     function showInterim(i: number, buf: string) {
         const updated = [...cells]
-        updated[i] = buf
+        updated[i] = buf || '　'
         setCells(updated)
     }
 
-    // Handle input/change
+    // Handle ASCII romaji input when not composing
     const handleCellChange = (index: number, raw: string) => {
-        const last = raw.slice(-1)
-        // If non-ASCII (likely direct kana), commit immediately
-        if (!/^[A-Za-z]$/.test(last)) {
-            commitChar(index, last || '　')
+        if (composing) {
+            setComposeText(raw)
+            showInterim(index, raw)
             return
         }
-
-        // Buffer romaji
+        const last = raw.slice(-1)
+        if (!/^[A-Za-z]$/.test(last)) {
+            // direct kana or other char
+            commitChar(index, last)
+            return
+        }
         const newBuf = (inputBuffer + last).toLowerCase()
         setInputBuffer(newBuf)
-
-        // Try conversion
         const kana = toHiragana(newBuf)
         if (kana !== newBuf) {
             commitChar(index, kana)
@@ -118,26 +122,24 @@ export default function EditableGenkoPreview({
 
     // Handle backspace & navigation
     const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
+        if (composing) return
         const row = Math.floor(index / columns)
         const col = index % columns
-
         switch (e.key) {
             case 'Backspace':
                 if (inputBuffer) {
-                    // Remove last romaji char
                     const buf = inputBuffer.slice(0, -1)
                     setInputBuffer(buf)
-                    showInterim(index, buf || '　')
+                    showInterim(index, buf)
                     e.preventDefault()
                 } else if (cells[index] !== '　') {
-                    // Clear cell
                     const updated = [...cells]
                     updated[index] = '　'
                     setCells(updated)
                     notifyParent(updated)
                     e.preventDefault()
                 } else {
-                    // Navigate back & clear previous
+                    // navigate back & clear prev
                     if (row > 0) {
                         const prev = index - columns
                         const updated = [...cells]
@@ -159,7 +161,6 @@ export default function EditableGenkoPreview({
                     }
                 }
                 break
-
             case 'ArrowRight':
                 if (col > 0) {
                     const ni = index - 1
@@ -171,7 +172,6 @@ export default function EditableGenkoPreview({
                     cellRefs.current[ni]?.focus()
                 }
                 break
-
             case 'ArrowLeft':
                 if (col < columns - 1) {
                     const ni = index + 1
@@ -183,7 +183,6 @@ export default function EditableGenkoPreview({
                     cellRefs.current[ni]?.focus()
                 }
                 break
-
             case 'ArrowDown':
                 if (row < rows - 1) {
                     const ni = index + columns
@@ -191,7 +190,6 @@ export default function EditableGenkoPreview({
                     cellRefs.current[ni]?.focus()
                 }
                 break
-
             case 'ArrowUp':
                 if (row > 0) {
                     const ni = index - columns
@@ -201,6 +199,11 @@ export default function EditableGenkoPreview({
                 break
         }
     }
+    console.log("inputBuffer", inputBuffer)
+    console.log("composeText", composeText)
+    console.log("composing", composing)
+    console.log("focusedIndex", focusedIndex)
+
 
     return (
         <div className="editable-genko-container">
@@ -219,17 +222,38 @@ export default function EditableGenkoPreview({
                             key={i}
                             ref={el => (cellRefs.current[i] = el)}
                             type="text"
-                            value={focusedIndex === i && inputBuffer ? inputBuffer : ch}
+                            value={
+                                composing && focusedIndex === i
+                                    ? composeText
+                                    : focusedIndex === i && inputBuffer
+                                        ? inputBuffer
+                                        : ch
+                            }
+                            onFocus={() => setFocusedIndex(i)}
                             onChange={e => handleCellChange(i, e.target.value)}
                             onKeyDown={e => handleKeyDown(e, i)}
-                            onFocus={() => setFocusedIndex(i)}
-                            className={`
-                editable-genko-cell
-                ${focusedIndex === i ? 'editable-genko-cell--focused' : ''}
-                ${formatting.bold.has(i) ? 'editable-genko-cell--bold' : ''}
-                ${formatting.italic.has(i) ? 'editable-genko-cell--italic' : ''}
-              `}
-                            maxLength={rows} // enough to show buffer
+                            onCompositionStart={() => {
+                                console.log("onCompositionStart")
+                                setComposing(true)
+                            }}
+                            onCompositionUpdate={e => {
+                                console.log("onCompositionUpdate")
+                                const v = e.currentTarget.value
+                                setComposeText(v)
+                                showInterim(i, v)
+                            }}
+                            onCompositionEnd={e => {
+                                console.log("onCompositionEnd")
+                                setComposing(false)
+                                commitChar(i, e.currentTarget.value)
+                            }}
+                            className={
+                                `editable-genko-cell` +
+                                `${focusedIndex === i ? ' editable-genko-cell--focused' : ''}` +
+                                `${formatting.bold.has(i) ? ' editable-genko-cell--bold' : ''}` +
+                                `${formatting.italic.has(i) ? ' editable-genko-cell--italic' : ''}`
+                            }
+                            maxLength={rows}
                         />
                     ))}
                 </div>
