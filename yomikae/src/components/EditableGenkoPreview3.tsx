@@ -121,7 +121,17 @@ export default function EditableGenkoPreview({
                         e.preventDefault()
                     } else if (col > 0) {
                         // Move to bottom of previous column
-                        const prevIndex = row + (col - 1) * rows
+                        // const prevIndex = row + (col - 1) * rows
+                        // const newCells = [...cells]
+                        // newCells[prevIndex] = '　'
+                        // setCells(newCells)
+                        // setFocusedIndex(prevIndex)
+                        // cellRefs.current[prevIndex]?.focus()
+                        // e.preventDefault()
+                        //const prevIndex = row + (col - 1) * rows
+                        //const prevIndex = index + 1 - ((rows + 1) * columns)
+                        //const prevIndex = index  - (index - 0) +(rows * columns) 
+                        const prevIndex = index + columns * (rows - 1) -1
                         const newCells = [...cells]
                         newCells[prevIndex] = '　'
                         setCells(newCells)
