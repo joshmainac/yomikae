@@ -30,12 +30,15 @@ export default function EditableGenkoPreview({
     const [cells, setCells] = useState<string[]>([])
     const [inputBuffer, setInputBuffer] = useState<string>('')
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
+    const [focusedColumn, setFocusedColumn] = useState<number | null>(null)
     const cellRefs = useRef<Array<HTMLInputElement | null>>([])
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
     const [formatting, setFormatting] = useState<CellFormatting>({
         bold: new Set(),
         italic: new Set(),
     })
+    console.log("cells", cells)
 
     // Initialize grid from `text` (column-major → row-major)
     useEffect(() => {
@@ -48,6 +51,42 @@ export default function EditableGenkoPreview({
         }
         setCells(grid)
     }, [text, columns, rows, totalCells])
+
+    useEffect(() => {
+        if (focusedColumn !== null && textareaRef.current) {
+            textareaRef.current.focus()
+            textareaRef.current.value = ''
+
+        }
+    }, [focusedColumn])
+
+    // Get text for a specific column
+    const getColumnText = (colIndex: number): string => {
+        let text = ''
+        for (let row = 0; row < rows; row++) {
+            text += cells[row * columns + colIndex]
+        }
+        return text
+    }
+
+    // Update cells in a column with new text
+    const updateColumnText = (colIndex: number, text: string) => {
+        const updated = [...cells]
+        const paddedText = text.padEnd(rows, '　')
+
+        for (let row = 0; row < rows; row++) {
+            updated[row * columns + colIndex] = paddedText[row]
+        }
+
+        setCells(updated)
+        notifyParent(updated)
+    }
+
+    // Handle column textarea input
+    const handleColumnInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        if (focusedColumn === null) return
+        updateColumnText(focusedColumn, e.target.value)
+    }
 
     // Notify parent with re-serialized text
     function notifyParent(updated: string[]) {
@@ -77,128 +116,38 @@ export default function EditableGenkoPreview({
         }
     }
 
-    // Commit a final kana (or direct char) into the cell
-    function commitChar(i: number, char: string) {
-        const updated = [...cells]
-        updated[i] = char
-        setCells(updated)
-        notifyParent(updated)
-        setInputBuffer('')
-        advanceFocus(i)
-    }
-
-    // Show intermediate romaji buffer in-cell
-    function showInterim(i: number, buf: string) {
-        const updated = [...cells]
-        updated[i] = buf
-        setCells(updated)
-    }
-
-    // Handle input/change
-    const handleCellChange = (index: number, raw: string) => {
-        const last = raw.slice(-1)
-        // If non-ASCII (likely direct kana), commit immediately
-        if (!/^[A-Za-z]$/.test(last)) {
-            commitChar(index, last || '　')
-            return
-        }
-
-        // Buffer romaji
-        const newBuf = (inputBuffer + last).toLowerCase()
-        setInputBuffer(newBuf)
-
-        // Try conversion
-        const kana = toHiragana(newBuf)
-        if (kana !== newBuf) {
-            commitChar(index, kana)
-        } else {
-            showInterim(index, newBuf)
-        }
-    }
-
-    // Handle backspace & navigation
-    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
-        const row = Math.floor(index / columns)
+    // Handle cell focus
+    const handleCellFocus = (index: number) => {
         const col = index % columns
+        setFocusedIndex(index)
+        setFocusedColumn(col)
+    }
 
-        switch (e.key) {
-            case 'Backspace':
-                if (inputBuffer) {
-                    // Remove last romaji char
-                    const buf = inputBuffer.slice(0, -1)
-                    setInputBuffer(buf)
-                    showInterim(index, buf || '　')
-                    e.preventDefault()
-                } else if (cells[index] !== '　') {
-                    // Clear cell
-                    const updated = [...cells]
-                    updated[index] = '　'
-                    setCells(updated)
-                    notifyParent(updated)
-                    e.preventDefault()
-                } else {
-                    // Navigate back & clear previous
-                    if (row > 0) {
-                        const prev = index - columns
-                        const updated = [...cells]
-                        updated[prev] = '　'
-                        setCells(updated)
-                        notifyParent(updated)
-                        setFocusedIndex(prev)
-                        cellRefs.current[prev]?.focus()
-                        e.preventDefault()
-                    } else if (col > 0) {
-                        const prev = index + columns * (rows - 1) - 1
-                        const updated = [...cells]
-                        updated[prev] = '　'
-                        setCells(updated)
-                        notifyParent(updated)
-                        setFocusedIndex(prev)
-                        cellRefs.current[prev]?.focus()
-                        e.preventDefault()
-                    }
-                }
-                break
+    // Handle textarea key press
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (focusedColumn === null) return
 
-            case 'ArrowRight':
-                if (col > 0) {
-                    const ni = index - 1
-                    setFocusedIndex(ni)
-                    cellRefs.current[ni]?.focus()
-                } else if (row > 0) {
-                    const ni = (row - 1) * columns + (columns - 1)
-                    setFocusedIndex(ni)
-                    cellRefs.current[ni]?.focus()
-                }
-                break
-
-            case 'ArrowLeft':
-                if (col < columns - 1) {
-                    const ni = index + 1
-                    setFocusedIndex(ni)
-                    cellRefs.current[ni]?.focus()
-                } else if (row < rows - 1) {
-                    const ni = (row + 1) * columns
-                    setFocusedIndex(ni)
-                    cellRefs.current[ni]?.focus()
-                }
-                break
-
-            case 'ArrowDown':
-                if (row < rows - 1) {
-                    const ni = index + columns
-                    setFocusedIndex(ni)
-                    cellRefs.current[ni]?.focus()
-                }
-                break
-
-            case 'ArrowUp':
-                if (row > 0) {
-                    const ni = index - columns
-                    setFocusedIndex(ni)
-                    cellRefs.current[ni]?.focus()
-                }
-                break
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            if (focusedColumn !== null && focusedColumn > 0) {
+                textareaRef.current?.blur()
+                setFocusedColumn(focusedColumn - 1)
+            }
+             else {
+                //textareaRef.current?.blur()
+            }
+        } else if (e.key === 'ArrowLeft') {
+            e.preventDefault()
+            if (focusedColumn > 0) {
+                textareaRef.current?.blur()
+                setFocusedColumn(focusedColumn - 1)
+            }
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault()
+            if (focusedColumn < columns - 1) {
+                textareaRef.current?.blur()
+                setFocusedColumn(focusedColumn + 1)
+            }
         }
     }
 
@@ -211,7 +160,8 @@ export default function EditableGenkoPreview({
                         display: 'grid',
                         gridTemplateColumns: `repeat(${columns}, 1fr)`,
                         gridTemplateRows: `repeat(${rows}, 1fr)`,
-                        direction: 'rtl',
+                        direction: 'ltr',
+                        position: 'relative',
                     }}
                 >
                     {cells.map((ch, i) => (
@@ -219,19 +169,53 @@ export default function EditableGenkoPreview({
                             key={i}
                             ref={el => (cellRefs.current[i] = el)}
                             type="text"
-                            value={focusedIndex === i && inputBuffer ? inputBuffer : ch}
-                            onChange={e => handleCellChange(i, e.target.value)}
-                            onKeyDown={e => handleKeyDown(e, i)}
-                            onFocus={() => setFocusedIndex(i)}
+                            value={ch}
+                            readOnly
+                            onFocus={() => handleCellFocus(i)}
                             className={`
-                editable-genko-cell
-                ${focusedIndex === i ? 'editable-genko-cell--focused' : ''}
-                ${formatting.bold.has(i) ? 'editable-genko-cell--bold' : ''}
-                ${formatting.italic.has(i) ? 'editable-genko-cell--italic' : ''}
-              `}
-                            maxLength={rows} // enough to show buffer
+                                editable-genko-cell
+                                ${focusedIndex === i ? 'editable-genko-cell--focused' : ''}
+                                ${formatting.bold.has(i) ? 'editable-genko-cell--bold' : ''}
+                                ${formatting.italic.has(i) ? 'editable-genko-cell--italic' : ''}
+                            `}
                         />
                     ))}
+
+                    {focusedColumn !== null && (
+                        <textarea
+                            ref={textareaRef}
+                            className="editable-genko-column-textarea"
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: `${focusedColumn * (100 / columns)}%`,
+                                width: `${100 / columns}%`,
+                                height: '100%',
+                                resize: 'none',
+                                background: 'rgba(255, 255, 255, 0.9)',
+                                zIndex: 10,
+                                padding: '4px',
+                                border: '2px solid #000',
+                                borderRadius: '4px',
+                                writingMode: 'vertical-lr',
+                                textOrientation: 'upright',
+                                fontSize: '16px', // 👈 Adjust this as you like
+                                lineHeight: '2.5', // 👈 Increase this value for more vertical space
+                                letterSpacing: '14px', // 👈 Optional: adds horizontal space between upright characters
+
+                                fontFamily: '"Yu Mincho", "Noto Serif JP", serif',
+
+
+
+                            }}
+                            onChange={handleColumnInput}
+                            onKeyDown={handleKeyDown}
+                            onBlur={() => setFocusedColumn(null)}
+                            rows={1}
+                            cols={columns}
+                            maxLength={rows}
+                        />
+                    )}
                 </div>
 
                 {showFoldMarker && <GenkoCenterFoldMarker columns={columns} />}
