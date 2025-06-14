@@ -11,7 +11,7 @@ export default function GenkoTextEditor2() {
     const [currentPage, setCurrentPage] = useState(0)
     const [suggestion, setSuggestion] = useState('')
     const [loading, setLoading] = useState(false)
-    const pageRefs = useRef<(HTMLDivElement | null)[]>([])
+    const [newPageIndex, setNewPageIndex] = useState<number | null>(null)
 
     //Load saved text from local storage
     useEffect(() => {
@@ -29,16 +29,6 @@ export default function GenkoTextEditor2() {
 
     //auto save to local storage as user types
     useAutoSave(STORAGE_KEY, JSON.stringify(pages))
-
-    // Focus on the newest page when it's added
-    useEffect(() => {
-        if (pageRefs.current.length > 0) {
-            const newestPage = pageRefs.current[pageRefs.current.length - 1]
-            if (newestPage) {
-                newestPage.focus()
-            }
-        }
-    }, [pages.length])
 
     const handleClear = () => {
         setPages([''])
@@ -77,7 +67,9 @@ export default function GenkoTextEditor2() {
     const handlePageChange = (pageIndex: number) => {
         // Add a new page if we're at the last page
         if (pageIndex === pages.length - 1) {
-            setPages([...pages, ''])
+            const newPages = [...pages, '']
+            setPages(newPages)
+            setNewPageIndex(newPages.length - 1)
         }
     }
 
@@ -116,8 +108,6 @@ export default function GenkoTextEditor2() {
                     <div
                         key={index}
                         className="relative"
-                        ref={el => pageRefs.current[index] = el}
-                        tabIndex={0}
                     >
                         <div className="absolute top-0 right-0 text-sm text-gray-500">
                             ページ {index + 1} / {pages.length}
@@ -126,6 +116,8 @@ export default function GenkoTextEditor2() {
                             text={pageText}
                             onChange={(text) => handleTextChange(text, index)}
                             onPageChange={() => handlePageChange(index)}
+                            shouldFocus={index === newPageIndex}
+                            onFocus={() => setNewPageIndex(null)}
                         />
                     </div>
                 ))}
