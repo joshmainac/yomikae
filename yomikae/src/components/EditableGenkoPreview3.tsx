@@ -216,7 +216,7 @@ export default function EditableGenkoPreview({
                                 top: 0,
                                 left: `${focusedColumn * (100 / columns)}%`,
                                 width: `${100 / columns}%`,
-                                height: '100%',
+                                height: '102%',
                                 resize: 'none',
                                 background: 'rgba(255, 255, 255, 0.9)',
                                 zIndex: 10,
@@ -236,6 +236,7 @@ export default function EditableGenkoPreview({
                             rows={1}
                             cols={columns}
                             maxLength={rows}
+                            wrap="soft"
                         />
                     )}
                 </div>

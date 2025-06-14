@@ -199,3 +199,11 @@ body {
 .editable-genko-cell::placeholder {
   color: #aaa;
 }
+
+
+.editable-genko-column-textarea {
+  resize: none !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  white-space: pre !important;
+}
