@@ -61,8 +61,8 @@ export default function EditableGenkoPreview({
     useEffect(() => {
         if (focusedColumn !== null && textareaRef.current) {
             textareaRef.current.focus()
-            textareaRef.current.value = ''
-
+            // Load the existing column text into the textarea, trimming trailing spaces
+            textareaRef.current.value = getColumnText(focusedColumn).replace(/　+$/, '')
         }
     }, [focusedColumn])
 
@@ -150,9 +150,12 @@ export default function EditableGenkoPreview({
 
         if (e.key === 'Enter') {
             e.preventDefault()
+            //update text and notify parent
+            updateColumnText(focusedColumn, (e.target as HTMLTextAreaElement).value)
             if (focusedColumn !== null && focusedColumn > 0) {
                 textareaRef.current?.blur()
                 setFocusedColumn(focusedColumn - 1)
+
             } else if (focusedColumn === 0) {
                 // When at the first column, move to the next page
                 textareaRef.current?.blur()
@@ -162,12 +165,16 @@ export default function EditableGenkoPreview({
             }
         } else if (e.key === 'ArrowLeft') {
             e.preventDefault()
+            //update text and notify parent
+            updateColumnText(focusedColumn, (e.target as HTMLTextAreaElement).value)
             if (focusedColumn > 0) {
                 textareaRef.current?.blur()
                 setFocusedColumn(focusedColumn - 1)
             }
         } else if (e.key === 'ArrowRight') {
             e.preventDefault()
+            //update text and notify parent
+            updateColumnText(focusedColumn, (e.target as HTMLTextAreaElement).value)
             if (focusedColumn < columns - 1) {
                 textareaRef.current?.blur()
                 setFocusedColumn(focusedColumn + 1)
@@ -230,7 +237,7 @@ export default function EditableGenkoPreview({
                                 letterSpacing: '14px',
                                 fontFamily: '"Yu Mincho", "Noto Serif JP", serif',
                             }}
-                            onChange={handleColumnInput}
+                            // onChange={handleColumnInput}
                             onKeyDown={handleKeyDown}
                             onBlur={() => setFocusedColumn(null)}
                             rows={1}
