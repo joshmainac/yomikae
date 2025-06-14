@@ -11,6 +11,7 @@ export default function GenkoTextEditor2() {
     const [currentPage, setCurrentPage] = useState(0)
     const [suggestion, setSuggestion] = useState('')
     const [loading, setLoading] = useState(false)
+    const pageRefs = useRef<(HTMLDivElement | null)[]>([])
 
     //Load saved text from local storage
     useEffect(() => {
@@ -28,6 +29,16 @@ export default function GenkoTextEditor2() {
 
     //auto save to local storage as user types
     useAutoSave(STORAGE_KEY, JSON.stringify(pages))
+
+    // Focus on the newest page when it's added
+    useEffect(() => {
+        if (pageRefs.current.length > 0) {
+            const newestPage = pageRefs.current[pageRefs.current.length - 1]
+            if (newestPage) {
+                newestPage.focus()
+            }
+        }
+    }, [pages.length])
 
     const handleClear = () => {
         setPages([''])
@@ -102,7 +113,12 @@ export default function GenkoTextEditor2() {
 
             <div className="flex flex-col-reverse gap-8 overflow-y-auto max-h-[calc(100vh-200px)]">
                 {pages.map((pageText, index) => (
-                    <div key={index} className="relative">
+                    <div
+                        key={index}
+                        className="relative"
+                        ref={el => pageRefs.current[index] = el}
+                        tabIndex={0}
+                    >
                         <div className="absolute top-0 right-0 text-sm text-gray-500">
                             ページ {index + 1} / {pages.length}
                         </div>
