@@ -57,31 +57,16 @@ export default function GenkoTextEditor2() {
         }
     }
 
-    const handleTextChange = (newText: string) => {
+    const handleTextChange = (newText: string, pageIndex: number) => {
         const newPages = [...pages]
-        newPages[currentPage] = newText
+        newPages[pageIndex] = newText
         setPages(newPages)
     }
 
-    const handlePageChange = () => {
+    const handlePageChange = (pageIndex: number) => {
         // Add a new page if we're at the last page
-        if (currentPage === pages.length - 1) {
+        if (pageIndex === pages.length - 1) {
             setPages([...pages, ''])
-        }
-        setCurrentPage(currentPage + 1)
-    }
-
-    const handlePrevPage = () => {
-        if (currentPage > 0) {
-            setCurrentPage(currentPage - 1)
-        }
-    }
-
-    const handleNextPage = () => {
-        if (currentPage < pages.length - 1) {
-            setCurrentPage(currentPage + 1)
-        } else {
-            handlePageChange()
         }
     }
 
@@ -115,30 +100,20 @@ export default function GenkoTextEditor2() {
                 </div>
             )}
 
-            <div className="flex justify-between items-center mb-2">
-                <button
-                    onClick={handlePrevPage}
-                    disabled={currentPage === 0}
-                    className="px-3 py-1 text-blue-600 hover:text-blue-800 underline transition-colors duration-200 disabled:opacity-50"
-                >
-                    前のページ
-                </button>
-                <span className="text-sm text-gray-600">
-                    ページ {currentPage + 1} / {pages.length}
-                </span>
-                <button
-                    onClick={handleNextPage}
-                    className="px-3 py-1 text-blue-600 hover:text-blue-800 underline transition-colors duration-200"
-                >
-                    次のページ
-                </button>
+            <div className="flex flex-col-reverse gap-8 overflow-y-auto max-h-[calc(100vh-200px)]">
+                {pages.map((pageText, index) => (
+                    <div key={index} className="relative">
+                        <div className="absolute top-0 right-0 text-sm text-gray-500">
+                            ページ {index + 1} / {pages.length}
+                        </div>
+                        <EditableGenkoPreview3
+                            text={pageText}
+                            onChange={(text) => handleTextChange(text, index)}
+                            onPageChange={() => handlePageChange(index)}
+                        />
+                    </div>
+                ))}
             </div>
-
-            <EditableGenkoPreview3
-                text={pages[currentPage]}
-                onChange={handleTextChange}
-                onPageChange={handlePageChange}
-            />
         </div>
     )
 }
