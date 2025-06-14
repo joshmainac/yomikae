@@ -7,24 +7,31 @@ import EditableGenkoPreview3 from "./EditableGenkoPreview3"
 export default function GenkoTextEditor2() {
     const charLimit = 1000
     const STORAGE_KEY = 'text-editor-content'
-    const [text, setText] = useState('')
+    const [pages, setPages] = useState<string[]>([''])
+    const [currentPage, setCurrentPage] = useState(0)
     const [suggestion, setSuggestion] = useState('')
     const [loading, setLoading] = useState(false)
-    console.log("old text", text)
 
     //Load saved text from local storage
     useEffect(() => {
         const saved = localStorage.getItem(STORAGE_KEY)
         if (saved) {
-            setText(saved)
+            try {
+                const savedPages = JSON.parse(saved)
+                setPages(savedPages)
+            } catch {
+                // If parsing fails, treat as single page
+                setPages([saved])
+            }
         }
     }, [])
 
     //auto save to local storage as user types
-    useAutoSave(STORAGE_KEY, text)
+    useAutoSave(STORAGE_KEY, JSON.stringify(pages))
 
     const handleClear = () => {
-        setText("")
+        setPages([''])
+        setCurrentPage(0)
         localStorage.removeItem(STORAGE_KEY)
     }
 
@@ -36,7 +43,7 @@ export default function GenkoTextEditor2() {
                 {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ text }),
+                    body: JSON.stringify({ text: pages[currentPage] }),
                 }
             )
             const data = await res.json()
@@ -51,16 +58,38 @@ export default function GenkoTextEditor2() {
     }
 
     const handleTextChange = (newText: string) => {
-        console.log("!newText", newText)
-        setText(newText)
+        const newPages = [...pages]
+        newPages[currentPage] = newText
+        setPages(newPages)
     }
-    const mytext = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん"
+
+    const handlePageChange = () => {
+        // Add a new page if we're at the last page
+        if (currentPage === pages.length - 1) {
+            setPages([...pages, ''])
+        }
+        setCurrentPage(currentPage + 1)
+    }
+
+    const handlePrevPage = () => {
+        if (currentPage > 0) {
+            setCurrentPage(currentPage - 1)
+        }
+    }
+
+    const handleNextPage = () => {
+        if (currentPage < pages.length - 1) {
+            setCurrentPage(currentPage + 1)
+        } else {
+            handlePageChange()
+        }
+    }
 
     return (
         <div className="flex flex-col gap-4">
             <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-600">
-                    {text.length}/{charLimit}文字
+                    {pages[currentPage].length}/{charLimit}文字
                 </div>
                 <div className="flex gap-2">
                     <button
@@ -71,7 +100,7 @@ export default function GenkoTextEditor2() {
                     </button>
                     <button
                         onClick={handleGrammerCheck}
-                        disabled={!text || loading}
+                        disabled={!pages[currentPage] || loading}
                         className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 disabled:opacity-50"
                     >
                         {loading ? '文法チェック中...' : '文法チェック'}
@@ -86,9 +115,29 @@ export default function GenkoTextEditor2() {
                 </div>
             )}
 
+            <div className="flex justify-between items-center mb-2">
+                <button
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 0}
+                    className="px-3 py-1 text-blue-600 hover:text-blue-800 underline transition-colors duration-200 disabled:opacity-50"
+                >
+                    前のページ
+                </button>
+                <span className="text-sm text-gray-600">
+                    ページ {currentPage + 1} / {pages.length}
+                </span>
+                <button
+                    onClick={handleNextPage}
+                    className="px-3 py-1 text-blue-600 hover:text-blue-800 underline transition-colors duration-200"
+                >
+                    次のページ
+                </button>
+            </div>
+
             <EditableGenkoPreview3
-                text={text}
+                text={pages[currentPage]}
                 onChange={handleTextChange}
+                onPageChange={handlePageChange}
             />
         </div>
     )

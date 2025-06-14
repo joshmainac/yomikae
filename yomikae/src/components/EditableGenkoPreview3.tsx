@@ -17,6 +17,7 @@ interface Props {
     rows?: number
     showFoldMarker?: boolean
     onChange?: (text: string) => void
+    onPageChange?: () => void
 }
 
 export default function EditableGenkoPreview({
@@ -25,6 +26,7 @@ export default function EditableGenkoPreview({
     rows = 20,
     showFoldMarker = false,
     onChange,
+    onPageChange,
 }: Props) {
     const totalCells = columns * rows
     const [cells, setCells] = useState<string[]>([])
@@ -132,9 +134,12 @@ export default function EditableGenkoPreview({
             if (focusedColumn !== null && focusedColumn > 0) {
                 textareaRef.current?.blur()
                 setFocusedColumn(focusedColumn - 1)
-            }
-             else {
-                //textareaRef.current?.blur()
+            } else if (focusedColumn === 0) {
+                // When at the first column, move to the next page
+                textareaRef.current?.blur()
+                setFocusedColumn(null)
+                setFocusedIndex(null)
+                onPageChange?.()
             }
         } else if (e.key === 'ArrowLeft') {
             e.preventDefault()
