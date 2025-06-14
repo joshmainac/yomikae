@@ -177,10 +177,14 @@ body {
 }
 
 /* Editable Genko Cell States */
+/* comment this out for now 
+note that when we press enter it will focus to the next column */
+/* but the focus for the cell is not updated */
 .editable-genko-cell--focused {
-  border-color: #4a9e4a;
+  /* border-color: #4a9e4a;
   border-style: solid;
-  background-color: rgba(127, 194, 127, 0.1);
+  background-color: rgba(127, 194, 127, 0.1); */
+
 }
 
 .editable-genko-cell--bold {
@@ -198,4 +202,12 @@ body {
 
 .editable-genko-cell::placeholder {
   color: #aaa;
+}
+
+
+.editable-genko-column-textarea {
+  resize: none !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  white-space: pre !important;
 }

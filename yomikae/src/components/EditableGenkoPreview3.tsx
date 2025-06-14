@@ -17,6 +17,9 @@ interface Props {
     rows?: number
     showFoldMarker?: boolean
     onChange?: (text: string) => void
+    onPageChange?: () => void
+    shouldFocus?: boolean
+    onFocus?: () => void
 }
 
 export default function EditableGenkoPreview({
@@ -25,6 +28,9 @@ export default function EditableGenkoPreview({
     rows = 20,
     showFoldMarker = false,
     onChange,
+    onPageChange,
+    shouldFocus = false,
+    onFocus,
 }: Props) {
     const totalCells = columns * rows
     const [cells, setCells] = useState<string[]>([])
@@ -59,6 +65,21 @@ export default function EditableGenkoPreview({
 
         }
     }, [focusedColumn])
+
+    // Add effect to handle initial focus
+    useEffect(() => {
+        if (shouldFocus) {
+            // Focus on the rightmost column (first in vertical writing)
+            setFocusedColumn(columns - 1)
+            // Small delay to ensure the textarea is rendered
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.focus()
+                    onFocus?.()
+                }
+            }, 0)
+        }
+    }, [shouldFocus, columns, onFocus])
 
     // Get text for a specific column
     const getColumnText = (colIndex: number): string => {
@@ -132,9 +153,12 @@ export default function EditableGenkoPreview({
             if (focusedColumn !== null && focusedColumn > 0) {
                 textareaRef.current?.blur()
                 setFocusedColumn(focusedColumn - 1)
-            }
-             else {
-                //textareaRef.current?.blur()
+            } else if (focusedColumn === 0) {
+                // When at the first column, move to the next page
+                textareaRef.current?.blur()
+                setFocusedColumn(null)
+                setFocusedIndex(null)
+                onPageChange?.()
             }
         } else if (e.key === 'ArrowLeft') {
             e.preventDefault()
@@ -167,7 +191,9 @@ export default function EditableGenkoPreview({
                     {cells.map((ch, i) => (
                         <input
                             key={i}
-                            ref={el => (cellRefs.current[i] = el)}
+                            ref={el => {
+                                cellRefs.current[i] = el
+                            }}
                             type="text"
                             value={ch}
                             readOnly
@@ -190,7 +216,7 @@ export default function EditableGenkoPreview({
                                 top: 0,
                                 left: `${focusedColumn * (100 / columns)}%`,
                                 width: `${100 / columns}%`,
-                                height: '100%',
+                                height: '102%',
                                 resize: 'none',
                                 background: 'rgba(255, 255, 255, 0.9)',
                                 zIndex: 10,
@@ -199,14 +225,10 @@ export default function EditableGenkoPreview({
                                 borderRadius: '4px',
                                 writingMode: 'vertical-lr',
                                 textOrientation: 'upright',
-                                fontSize: '16px', // 👈 Adjust this as you like
-                                lineHeight: '2.5', // 👈 Increase this value for more vertical space
-                                letterSpacing: '14px', // 👈 Optional: adds horizontal space between upright characters
-
+                                fontSize: '16px',
+                                lineHeight: '2.5',
+                                letterSpacing: '14px',
                                 fontFamily: '"Yu Mincho", "Noto Serif JP", serif',
-
-
-
                             }}
                             onChange={handleColumnInput}
                             onKeyDown={handleKeyDown}
@@ -214,6 +236,7 @@ export default function EditableGenkoPreview({
                             rows={1}
                             cols={columns}
                             maxLength={rows}
+                            wrap="soft"
                         />
                     )}
                 </div>
