@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useAutoSave } from "@/hooks/useAutoSave"
 import EditableGenkoPreview3 from "./EditableGenkoPreview3"
 import GrammarChecker from "./textEditor/grammarChecker"
@@ -11,7 +11,7 @@ export default function GenkoTextEditor2() {
     const [pages, setPages] = useState<string[]>([''])
     const [currentPage, setCurrentPage] = useState(0)
     const [newPageIndex, setNewPageIndex] = useState<number | null>(null)
-    console.log("reder editor2", pages)
+    // console.log("reder editor2", pages)
 
     //Load saved text from local storage
     useEffect(() => {
@@ -39,18 +39,37 @@ export default function GenkoTextEditor2() {
 
 
 
-    const handleTextChange = (newText: string, pageIndex: number) => {
+    // const handleTextChange = (newText: string, pageIndex: number) => {
+    //     setPages(prev => {
+    //         const updated = [...prev]
+    //         updated[pageIndex] = newText
+    //         return updated
+    //     })
+    // }
+
+
+    // const handlePageChange = (pageIndex: number) => {
+    //     setPages(prev => {
+    //         // Only add a new page if we're at the last page
+    //         if (pageIndex === prev.length - 1) {
+    //             const newPages = [...prev, '']
+    //             setNewPageIndex(newPages.length - 1)
+    //             return newPages
+    //         }
+    //         return prev
+    //     })
+    // }
+
+    const handleTextChange = useCallback((newText: string, pageIndex: number) => {
         setPages(prev => {
             const updated = [...prev]
             updated[pageIndex] = newText
             return updated
         })
-    }
-    
+    }, [])
 
-    const handlePageChange = (pageIndex: number) => {
+    const handlePageChange = useCallback((pageIndex: number) => {
         setPages(prev => {
-            // Only add a new page if we're at the last page
             if (pageIndex === prev.length - 1) {
                 const newPages = [...prev, '']
                 setNewPageIndex(newPages.length - 1)
@@ -58,7 +77,23 @@ export default function GenkoTextEditor2() {
             }
             return prev
         })
-    }
+    }, [])
+
+    // Create memoized callbacks for each page
+    const memoizedCallbacks = useMemo(() => {
+        return pages.map((_, index) => ({
+            onChange: (text: string) => handleTextChange(text, index),
+            onPageChange: () => handlePageChange(index)
+        }))
+    }, [pages.length, handleTextChange, handlePageChange])
+
+    const handleFocusForIndex = useCallback(
+        () => setNewPageIndex(null),
+        []
+    )
+
+
+
 
     return (
         <div className="flex flex-col gap-4">
@@ -68,19 +103,33 @@ export default function GenkoTextEditor2() {
                         key={index}
                         className="relative"
                     >
-                        <div className="absolute top-0 right-0 text-sm text-gray-500">
+                        {(() => {
+                            console.log("render editor3", pageText, index, index === newPageIndex)
+                            return null
+                        })()}
+
+                        {/* <div className="absolute top-0 right-0 text-sm text-gray-500">
                             ページ {index + 1} / {pages.length}
-                        </div>
-                        <EditableGenkoPreview3
+                        </div> */}
+                        {/* <EditableGenkoPreview3
                             text={pageText}
                             onChange={(text) => handleTextChange(text, index)}
                             onPageChange={() => handlePageChange(index)}
                             shouldFocus={index === newPageIndex}
                             onFocus={() => setNewPageIndex(null)}
+                        /> */}
+                        <EditableGenkoPreview3
+                            text={pageText}
+                            onChange={memoizedCallbacks[index]?.onChange}
+                            onPageChange={memoizedCallbacks[index]?.onPageChange}
+                            shouldFocus={index === newPageIndex}
+                            onFocus={handleFocusForIndex}
                         />
+
                     </div>
                 ))}
             </div>
+            {/* //memorize not working */}
 
             <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-600">

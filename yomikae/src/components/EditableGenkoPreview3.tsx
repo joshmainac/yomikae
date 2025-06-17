@@ -22,7 +22,7 @@ interface Props {
     onFocus?: () => void
 }
 
-export default function EditableGenkoPreview({
+function EditableGenkoPreview({
     text,
     columns = 20,
     rows = 20,
@@ -253,3 +253,24 @@ export default function EditableGenkoPreview({
         </div>
     )
 }
+
+export default React.memo(EditableGenkoPreview, (prevProps, nextProps) => {
+    // Debug logging to see what's changing
+    const changed = {
+        text: prevProps.text !== nextProps.text,
+        onChange: prevProps.onChange !== nextProps.onChange,
+        onPageChange: prevProps.onPageChange !== nextProps.onPageChange,
+        shouldFocus: prevProps.shouldFocus !== nextProps.shouldFocus,
+        onFocus: prevProps.onFocus !== nextProps.onFocus,
+        columns: prevProps.columns !== nextProps.columns,
+        rows: prevProps.rows !== nextProps.rows,
+        showFoldMarker: prevProps.showFoldMarker !== nextProps.showFoldMarker,
+    }
+    
+    const hasChanges = Object.values(changed).some(Boolean)
+    if (hasChanges) {
+        console.log('EditableGenkoPreview3 props changed:', changed, 'text:', prevProps.text.slice(0, 10))
+    }
+    
+    return !hasChanges
+})
