@@ -3,7 +3,6 @@
 'use client'
 
 import React, { useState, useEffect, useRef, KeyboardEvent } from 'react'
-import { toHiragana } from 'wanakana'
 import GenkoCenterFoldMarker from './GenkoCenterFoldMarker'
 
 interface CellFormatting {
@@ -34,7 +33,6 @@ function EditableGenkoPreview({
 }: Props) {
     const totalCells = columns * rows
     const [cells, setCells] = useState<string[]>([])
-    const [inputBuffer, setInputBuffer] = useState<string>('')
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
     const [focusedColumn, setFocusedColumn] = useState<number | null>(null)
     const cellRefs = useRef<Array<HTMLInputElement | null>>([])

@@ -11,7 +11,6 @@ export default function GenkoTextEditor2() {
     const [pages, setPages] = useState<string[]>([''])
     const [currentPage, setCurrentPage] = useState(0)
     const [newPageIndex, setNewPageIndex] = useState<number | null>(null)
-    // console.log("reder editor2", pages)
 
     //Load saved text from local storage
     useEffect(() => {
@@ -39,26 +38,7 @@ export default function GenkoTextEditor2() {
 
 
 
-    // const handleTextChange = (newText: string, pageIndex: number) => {
-    //     setPages(prev => {
-    //         const updated = [...prev]
-    //         updated[pageIndex] = newText
-    //         return updated
-    //     })
-    // }
 
-
-    // const handlePageChange = (pageIndex: number) => {
-    //     setPages(prev => {
-    //         // Only add a new page if we're at the last page
-    //         if (pageIndex === prev.length - 1) {
-    //             const newPages = [...prev, '']
-    //             setNewPageIndex(newPages.length - 1)
-    //             return newPages
-    //         }
-    //         return prev
-    //     })
-    // }
 
     const handleTextChange = useCallback((newText: string, pageIndex: number) => {
         setPages(prev => {
@@ -108,16 +88,6 @@ export default function GenkoTextEditor2() {
                             return null
                         })()}
 
-                        {/* <div className="absolute top-0 right-0 text-sm text-gray-500">
-                            ページ {index + 1} / {pages.length}
-                        </div> */}
-                        {/* <EditableGenkoPreview3
-                            text={pageText}
-                            onChange={(text) => handleTextChange(text, index)}
-                            onPageChange={() => handlePageChange(index)}
-                            shouldFocus={index === newPageIndex}
-                            onFocus={() => setNewPageIndex(null)}
-                        /> */}
                         <EditableGenkoPreview3
                             text={pageText}
                             onChange={memoizedCallbacks[index]?.onChange}
@@ -129,7 +99,6 @@ export default function GenkoTextEditor2() {
                     </div>
                 ))}
             </div>
-            {/* //memorize not working */}
 
             <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-600">
