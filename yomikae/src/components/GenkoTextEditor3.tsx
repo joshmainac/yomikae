@@ -1,16 +1,15 @@
 'use client'
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useAutoSave } from "@/hooks/useAutoSave"
 import EditableGenkoPreview3 from "./EditableGenkoPreview3"
+import GrammarChecker from "./textEditor/grammarChecker"
 
 export default function GenkoTextEditor2() {
     const charLimit = 1000
     const STORAGE_KEY = 'text-editor-content'
     const [pages, setPages] = useState<string[]>([''])
     const [currentPage, setCurrentPage] = useState(0)
-    const [suggestion, setSuggestion] = useState('')
-    const [loading, setLoading] = useState(false)
     const [newPageIndex, setNewPageIndex] = useState<number | null>(null)
 
     //Load saved text from local storage
@@ -36,45 +35,71 @@ export default function GenkoTextEditor2() {
         localStorage.removeItem(STORAGE_KEY)
     }
 
-    const handleGrammerCheck = async () => {
-        setLoading(true)
-        setSuggestion('')
-        try {
-            const res = await fetch('/api/grammar-check',
-                {
-                    method: 'POST',
-                    headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ text: pages[currentPage] }),
-                }
-            )
-            const data = await res.json()
-            setSuggestion(data.suggestion || '文法チェックに失敗しました')
 
-        } catch (error) {
-            console.error('文法チェックエラー:', error)
-            setSuggestion('文法チェックに失敗しました')
-        } finally {
-            setLoading(false)
-        }
-    }
 
-    const handleTextChange = (newText: string, pageIndex: number) => {
-        const newPages = [...pages]
-        newPages[pageIndex] = newText
-        setPages(newPages)
-    }
 
-    const handlePageChange = (pageIndex: number) => {
-        // Add a new page if we're at the last page
-        if (pageIndex === pages.length - 1) {
-            const newPages = [...pages, '']
-            setPages(newPages)
-            setNewPageIndex(newPages.length - 1)
-        }
-    }
+
+
+    const handleTextChange = useCallback((newText: string, pageIndex: number) => {
+        setPages(prev => {
+            const updated = [...prev]
+            updated[pageIndex] = newText
+            return updated
+        })
+    }, [])
+
+    const handlePageChange = useCallback((pageIndex: number) => {
+        setPages(prev => {
+            if (pageIndex === prev.length - 1) {
+                const newPages = [...prev, '']
+                setNewPageIndex(newPages.length - 1)
+                return newPages
+            }
+            return prev
+        })
+    }, [])
+
+    // Create memoized callbacks for each page
+    const memoizedCallbacks = useMemo(() => {
+        return pages.map((_, index) => ({
+            onChange: (text: string) => handleTextChange(text, index),
+            onPageChange: () => handlePageChange(index)
+        }))
+    }, [pages.length, handleTextChange, handlePageChange])
+
+    const handleFocusForIndex = useCallback(
+        () => setNewPageIndex(null),
+        []
+    )
+
+
+
 
     return (
         <div className="flex flex-col gap-4">
+            <div className="flex flex-col-reverse gap-8 overflow-y-auto max-h-[calc(100vh-200px)]">
+                {pages.map((pageText, index) => (
+                    <div
+                        key={index}
+                        className="relative"
+                    >
+                        {(() => {
+                            console.log("render editor3", pageText, index, index === newPageIndex)
+                            return null
+                        })()}
+
+                        <EditableGenkoPreview3
+                            text={pageText}
+                            onChange={memoizedCallbacks[index]?.onChange}
+                            onPageChange={memoizedCallbacks[index]?.onPageChange}
+                            shouldFocus={index === newPageIndex}
+                            onFocus={handleFocusForIndex}
+                        />
+
+                    </div>
+                ))}
+            </div>
+
             <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-600">
                     {pages[currentPage].length}/{charLimit}文字
@@ -86,42 +111,12 @@ export default function GenkoTextEditor2() {
                     >
                         クリア
                     </button>
-                    <button
-                        onClick={handleGrammerCheck}
-                        disabled={!pages[currentPage] || loading}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 disabled:opacity-50"
-                    >
-                        {loading ? '文法チェック中...' : '文法チェック'}
-                    </button>
                 </div>
             </div>
 
-            {suggestion && (
-                <div className="bg-gray-100 p-4 rounded-md">
-                    <h2 className="text-lg font-bold mb-2">文法チェック結果</h2>
-                    <p className="text-sm text-gray-600">{suggestion}</p>
-                </div>
-            )}
-
-            <div className="flex flex-col-reverse gap-8 overflow-y-auto max-h-[calc(100vh-200px)]">
-                {pages.map((pageText, index) => (
-                    <div
-                        key={index}
-                        className="relative"
-                    >
-                        <div className="absolute top-0 right-0 text-sm text-gray-500">
-                            ページ {index + 1} / {pages.length}
-                        </div>
-                        <EditableGenkoPreview3
-                            text={pageText}
-                            onChange={(text) => handleTextChange(text, index)}
-                            onPageChange={() => handlePageChange(index)}
-                            shouldFocus={index === newPageIndex}
-                            onFocus={() => setNewPageIndex(null)}
-                        />
-                    </div>
-                ))}
-            </div>
+            <GrammarChecker
+                text={pages[currentPage]}
+            />
         </div>
     )
 }

@@ -3,7 +3,6 @@
 'use client'
 
 import React, { useState, useEffect, useRef, KeyboardEvent } from 'react'
-import { toHiragana } from 'wanakana'
 import GenkoCenterFoldMarker from './GenkoCenterFoldMarker'
 
 interface CellFormatting {
@@ -22,7 +21,7 @@ interface Props {
     onFocus?: () => void
 }
 
-export default function EditableGenkoPreview({
+function EditableGenkoPreview({
     text,
     columns = 20,
     rows = 20,
@@ -34,7 +33,6 @@ export default function EditableGenkoPreview({
 }: Props) {
     const totalCells = columns * rows
     const [cells, setCells] = useState<string[]>([])
-    const [inputBuffer, setInputBuffer] = useState<string>('')
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
     const [focusedColumn, setFocusedColumn] = useState<number | null>(null)
     const cellRefs = useRef<Array<HTMLInputElement | null>>([])
@@ -61,8 +59,8 @@ export default function EditableGenkoPreview({
     useEffect(() => {
         if (focusedColumn !== null && textareaRef.current) {
             textareaRef.current.focus()
-            textareaRef.current.value = ''
-
+            // Load the existing column text into the textarea, trimming trailing spaces
+            textareaRef.current.value = getColumnText(focusedColumn).replace(/　+$/, '')
         }
     }, [focusedColumn])
 
@@ -150,9 +148,12 @@ export default function EditableGenkoPreview({
 
         if (e.key === 'Enter') {
             e.preventDefault()
+            //update text and notify parent
+            updateColumnText(focusedColumn, (e.target as HTMLTextAreaElement).value)
             if (focusedColumn !== null && focusedColumn > 0) {
                 textareaRef.current?.blur()
                 setFocusedColumn(focusedColumn - 1)
+
             } else if (focusedColumn === 0) {
                 // When at the first column, move to the next page
                 textareaRef.current?.blur()
@@ -162,12 +163,16 @@ export default function EditableGenkoPreview({
             }
         } else if (e.key === 'ArrowLeft') {
             e.preventDefault()
+            //update text and notify parent
+            updateColumnText(focusedColumn, (e.target as HTMLTextAreaElement).value)
             if (focusedColumn > 0) {
                 textareaRef.current?.blur()
                 setFocusedColumn(focusedColumn - 1)
             }
         } else if (e.key === 'ArrowRight') {
             e.preventDefault()
+            //update text and notify parent
+            updateColumnText(focusedColumn, (e.target as HTMLTextAreaElement).value)
             if (focusedColumn < columns - 1) {
                 textareaRef.current?.blur()
                 setFocusedColumn(focusedColumn + 1)
@@ -230,7 +235,7 @@ export default function EditableGenkoPreview({
                                 letterSpacing: '14px',
                                 fontFamily: '"Yu Mincho", "Noto Serif JP", serif',
                             }}
-                            onChange={handleColumnInput}
+                            // onChange={handleColumnInput}
                             onKeyDown={handleKeyDown}
                             onBlur={() => setFocusedColumn(null)}
                             rows={1}
@@ -246,3 +251,24 @@ export default function EditableGenkoPreview({
         </div>
     )
 }
+
+export default React.memo(EditableGenkoPreview, (prevProps, nextProps) => {
+    // Debug logging to see what's changing
+    const changed = {
+        text: prevProps.text !== nextProps.text,
+        onChange: prevProps.onChange !== nextProps.onChange,
+        onPageChange: prevProps.onPageChange !== nextProps.onPageChange,
+        shouldFocus: prevProps.shouldFocus !== nextProps.shouldFocus,
+        onFocus: prevProps.onFocus !== nextProps.onFocus,
+        columns: prevProps.columns !== nextProps.columns,
+        rows: prevProps.rows !== nextProps.rows,
+        showFoldMarker: prevProps.showFoldMarker !== nextProps.showFoldMarker,
+    }
+    
+    const hasChanges = Object.values(changed).some(Boolean)
+    if (hasChanges) {
+        console.log('EditableGenkoPreview3 props changed:', changed, 'text:', prevProps.text.slice(0, 10))
+    }
+    
+    return !hasChanges
+})
